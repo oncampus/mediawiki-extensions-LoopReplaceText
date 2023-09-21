@@ -118,9 +118,11 @@ class SpecialReplaceText extends SpecialPage
 		$this->use_regex = $request->getBool('use_regex');
 		$this->category = $request->getText('category');
 		$this->prefix = $request->getText('prefix');
-		$this->edit_pages = $request->getBool('edit_pages');
-		$this->move_pages = $request->getBool('move_pages');
-		$this->doAnnounce = $request->getBool('doAnnounce');
+
+		$this->edit_pages = true; // $request->getBool('edit_pages');
+		$this->move_pages = false; // $request->getBool('move_pages');
+		$this->doAnnounce = true; // $request->getBool('doAnnounce');
+
 		$this->selected_namespaces = $this->getSelectedNamespaces();
 
 		$services = MediaWikiServices::getInstance();
@@ -584,7 +586,11 @@ class SpecialReplaceText extends SpecialPage
 			'label' => $this->msg('replacetext_continue')->text(),
 			'flags' => ['primary', 'progressive']
 		]);
+		// TODO: remove buttons, make set ones as default
+
+
 		$out->addHTML(
+			/*
 			"<fieldset class=\"ext-replacetext-searchoptions\">\n" .
 				Xml::tags('h4', null, $this->msg('replacetext_optionalfilters')->parse()) .
 				Xml::element('div', ['class' => 'ext-replacetext-divider'], '', false) .
@@ -612,9 +618,12 @@ class SpecialReplaceText extends SpecialPage
 					true
 				) .
 				"</p>\n" .
-				$continueButton .
+				*/
+
+			$continueButton .
 				Xml::closeElement('form')
 		);
+
 		$out->addModuleStyles('ext.ReplaceTextStyles');
 		$out->addModules('ext.ReplaceText');
 	}
@@ -655,19 +664,23 @@ class SpecialReplaceText extends SpecialPage
 		// Try not to make too many assumptions about namespace numbering.
 		$rows = [];
 		$tables = "";
+		// change these to add/remove searchable options
+		$namespacesToShow = ['loop-glossary-namespace', ''];
 		$namespaceInfo = MediaWikiServices::getInstance()->getNamespaceInfo();
 		foreach ($namespaces as $ns => $name) {
-			$subj = $namespaceInfo->getSubject($ns);
-			if (!array_key_exists($subj, $rows)) {
-				$rows[$subj] = "";
+			if (in_array($namespaceInfo->getCanonicalName($ns), $namespacesToShow)) {
+				$subj = $namespaceInfo->getSubject($ns);
+				if (!array_key_exists($subj, $rows)) {
+					$rows[$subj] = "";
+				}
+				$name = str_replace('_', ' ', $name);
+				if ($name == '') {
+					$name = $this->msg('blanknamespace')->text();
+				}
+				$rows[$subj] .= Xml::openElement('td', ['style' => 'white-space: nowrap']) .
+					Xml::checkLabel($name, "ns{$ns}", "mw-search-ns{$ns}", in_array($ns, $namespaces)) .
+					Xml::closeElement('td') . "\n";
 			}
-			$name = str_replace('_', ' ', $name);
-			if ($name == '') {
-				$name = $this->msg('blanknamespace')->text();
-			}
-			$rows[$subj] .= Xml::openElement('td', ['style' => 'white-space: nowrap']) .
-				Xml::checkLabel($name, "ns{$ns}", "mw-search-ns{$ns}", in_array($ns, $namespaces)) .
-				Xml::closeElement('td') . "\n";
 		}
 		$rows = array_values($rows);
 		$numRows = count($rows);
@@ -838,13 +851,13 @@ class SpecialReplaceText extends SpecialPage
 
 		$cw = MediaWikiServices::getInstance()->getUserOptionsLookup()
 			->getOption($this->getUser(), 'contextchars', 40);
-
 		// Get all indexes
 		if ($use_regex) {
 			preg_match_all("/$target/Uu", $text, $matches, PREG_OFFSET_CAPTURE);
 		} else {
 			$targetq = preg_quote($target, '/');
-			preg_match_all("/$targetq/", $text, $matches, PREG_OFFSET_CAPTURE);
+				// \b will ensure, that whole words are matched and users dont accidentally replace every singular occurence of "a" with "one" for example
+			preg_match_all("/\b$targetq\b/", $text, $matches, PREG_OFFSET_CAPTURE);
 		}
 
 		$poss = [];
@@ -886,7 +899,8 @@ class SpecialReplaceText extends SpecialPage
 				$targetStr = "/$target/Uu";
 			} else {
 				$targetq = preg_quote($this->convertWhiteSpaceToHTML($target), '/');
-				$targetStr = "/$targetq/i";
+				// \b will ensure, that whole words are matched and users dont accidentally replace every singular occurence of "a" with "one" for example
+				$targetStr = "/\b$targetq\b/i";
 			}
 			$context .= preg_replace($targetStr, '<span class="ext-replacetext-searchmatch">\0</span>', $snippet);
 
