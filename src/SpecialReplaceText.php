@@ -45,6 +45,8 @@ class SpecialReplaceText extends SpecialPage
 	private $move_pages;
 	private $selected_namespaces;
 	private $doAnnounce;
+	// change these to add/remove searchable options
+	private $namespacesToShow = ['loop-glossary-namespace', ''];
 
 	public function __construct()
 	{
@@ -590,36 +592,6 @@ class SpecialReplaceText extends SpecialPage
 
 
 		$out->addHTML(
-			/*
-			"<fieldset class=\"ext-replacetext-searchoptions\">\n" .
-				Xml::tags('h4', null, $this->msg('replacetext_optionalfilters')->parse()) .
-				Xml::element('div', ['class' => 'ext-replacetext-divider'], '', false) .
-				"<p>$category_search_label\n" .
-				Xml::input('category', 20, $this->category, ['type' => 'text']) . '</p>' .
-				"<p>$prefix_search_label\n" .
-				Xml::input('prefix', 20, $this->prefix, ['type' => 'text']) . '</p>' .
-				"</fieldset>\n" .
-				"<p>\n" .
-				Xml::checkLabel(
-					$this->msg('replacetext_editpages')->text(),
-					'edit_pages',
-					'edit_pages',
-					true
-				) . '<br />' .
-				Xml::checkLabel(
-					$this->msg('replacetext_movepages')->text(),
-					'move_pages',
-					'move_pages'
-				) . '<br />' .
-				Xml::checkLabel(
-					$this->msg('replacetext_announce', $rcPageName)->text(),
-					'doAnnounce',
-					'doAnnounce',
-					true
-				) .
-				"</p>\n" .
-				*/
-
 			$continueButton .
 				Xml::closeElement('form')
 		);
@@ -664,11 +636,9 @@ class SpecialReplaceText extends SpecialPage
 		// Try not to make too many assumptions about namespace numbering.
 		$rows = [];
 		$tables = "";
-		// change these to add/remove searchable options
-		$namespacesToShow = ['loop-glossary-namespace', ''];
 		$namespaceInfo = MediaWikiServices::getInstance()->getNamespaceInfo();
 		foreach ($namespaces as $ns => $name) {
-			if (in_array($namespaceInfo->getCanonicalName($ns), $namespacesToShow)) {
+			if (in_array($namespaceInfo->getCanonicalName($ns), $this->namespacesToShow)) {
 				$subj = $namespaceInfo->getSubject($ns);
 				if (!array_key_exists($subj, $rows)) {
 					$rows[$subj] = "";
@@ -856,7 +826,7 @@ class SpecialReplaceText extends SpecialPage
 			preg_match_all("/$target/Uu", $text, $matches, PREG_OFFSET_CAPTURE);
 		} else {
 			$targetq = preg_quote($target, '/');
-				// \b will ensure, that whole words are matched and users dont accidentally replace every singular occurence of "a" with "one" for example
+			// \b will ensure, that whole words are matched and users dont accidentally replace every singular "a" with "one" for example
 			preg_match_all("/\b$targetq\b/", $text, $matches, PREG_OFFSET_CAPTURE);
 		}
 
